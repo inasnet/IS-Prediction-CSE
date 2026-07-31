@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Downloaded reports and temporary extraction files
+reports/
+data/reports_2025_extension/
+data/intermediate/
+logs/
+*.part
+
+# Generated binary models and temporary visual reviews
+data/output/modeles_is/
+data/output/review_2025/
+data/output/temp_*/
+
+# Local archives and generated caches
+archives_code/*.zip
+archives_code/scripts_apres_rapport_3/
+
+# Temporary report source created during this session
+RAPPORT_HEBDOMADAIRE_4_CORRIGE.tex
+
+# Office and operating-system temporary files
+~$*
+.DS_Store
+Thumbs.db
+desktop.ini
+

@@ -1,0 +1,12 @@
+beautifulsoup4
+joblib
+matplotlib
+numpy
+openpyxl
+pandas
+pdfplumber
+requests
+scikit-learn
+scipy
+seaborn
+statsmodels
