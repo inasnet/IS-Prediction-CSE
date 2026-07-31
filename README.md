@@ -1,62 +1,141 @@
-# Prédiction de l’Impôt sur les Sociétés — Bourse de Casablanca
+# Prévision de l’Impôt sur les Sociétés des entreprises cotées à la Bourse de Casablanca
 
-Projet de stage consacré à la construction d’un panel financier et à la
-prédiction exploratoire de l’impôt sur les sociétés (IS) des entreprises
-cotées à la Bourse de Casablanca.
+Ce projet de stage développe une chaîne complète de traitement destinée à analyser
+et à prévoir l’Impôt sur les Sociétés (IS) des entreprises cotées à la Bourse de
+Casablanca. Il associe collecte de données financières, contrôle de qualité,
+construction d’un panel entreprise–année, analyse statistique et Machine Learning.
 
-## Objectifs
+## Problématique
 
-- collecter les rapports et états financiers publiés ;
-- extraire et harmoniser les variables financières ;
-- rapprocher les variables explicatives de la base annuelle d’IS ;
-- construire un panel entreprise–année ;
-- réaliser les statistiques descriptives et les contrôles de qualité ;
-- comparer des modèles naïfs, économétriques et de Machine Learning ;
-- préparer des prévisions exploratoires de l’IS.
+L’objectif est d’expliquer et d’anticiper l’évolution annuelle de l’IS à partir
+des caractéristiques comptables et financières propres à chaque entreprise.
+L’utilisation d’un panel permet de combiner :
 
-## Variables principales
+- la dimension temporelle, à travers plusieurs exercices ;
+- la dimension individuelle, à travers plusieurs entreprises ;
+- la dimension sectorielle, à travers les différentes branches d’activité.
 
-La base couvre notamment le chiffre d’affaires, l’EBIT, l’EBITDA, le
-résultat financier, le résultat avant impôt (RCAI), le résultat net, le
-total de l’actif, les capitaux propres, les dettes, la trésorerie, les
-immobilisations corporelles et l’impôt différé.
+Cette organisation augmente le nombre d’observations disponibles comparativement
+à une unique série annuelle agrégée et permet d’étudier l’hétérogénéité entre
+les entreprises.
 
-## Organisation du code
+## Variable cible
 
-Les scripts `01_` à `07_` constituent le pipeline initial présenté dans
-le rapport hebdomadaire n°3. Les scripts `08_` à `14_` regroupent les
-étapes ultérieures par thème :
+La variable à prédire est le montant annuel de l’Impôt sur les Sociétés associé
+à chaque couple `entreprise–année`.
 
-- sources et scraping ;
-- validation et diagnostics ;
-- construction du panel ;
-- analyse, modélisation et prévision ;
-- variables externes et univers boursier ;
-- intégrations 2024–2025 ;
-- intégrations historiques.
+## Variables explicatives
 
-Le fichier `REGROUPEMENT_SCRIPTS.json` indique dans quel module thématique
-se trouve chaque ancienne étape.
+Les principales variables financières retenues sont :
 
-## Données et reproductibilité
+| Dimension | Variables |
+|---|---|
+| Activité | Chiffre d’affaires |
+| Rentabilité | EBIT, EBITDA, résultat financier, RCAI, résultat net |
+| Taille | Total de l’actif, capitaux propres |
+| Structure financière | Total des dettes, dettes financières |
+| Liquidité | Trésorerie et équivalents |
+| Investissement | Immobilisations corporelles |
+| Fiscalité | Impôt différé, taux effectif d’imposition |
+| Contrôle | Société, année, secteur, nature des comptes |
 
-Les rapports PDF bruts, caches et fichiers temporaires ne sont pas
-versionnés en raison de leur volume. Ils peuvent être reconstruits à
-l’aide des scripts de collecte. Les données d’entrée légères et les
-résultats tabulaires utiles sont conservés dans `data/`.
+Le RCAI désigne le **résultat courant avant impôt**. Le taux effectif
+d’imposition est calculé à partir des variables fiscales et du résultat avant
+impôt lorsque les données nécessaires sont disponibles.
 
-Les premiers résultats de modélisation sont exploratoires : ils ont été
-calculés sur une version antérieure et plus restreinte de la base. Les
-modèles doivent être réentraînés après consolidation du panel récent.
+## Démarche méthodologique
+
+Le pipeline suit les étapes suivantes :
+
+1. identification des entreprises et des sources financières ;
+2. collecte et extraction des données ;
+3. normalisation des dénominations, unités et formats ;
+4. distinction entre comptes sociaux et comptes consolidés ;
+5. détection des doublons, incohérences et valeurs manquantes ;
+6. rapprochement avec la base annuelle d’IS ;
+7. construction du panel entreprise–année ;
+8. production de statistiques descriptives ;
+9. création et sélection des variables explicatives ;
+10. validation temporelle et comparaison des modèles ;
+11. génération de prévisions individuelles par entreprise.
+
+La séparation chronologique des ensembles d’entraînement et de test est
+privilégiée afin d’éviter d’utiliser, lors de l’apprentissage, des informations
+postérieures à la période prédite.
+
+## Modélisation
+
+Le projet compare plusieurs familles de méthodes :
+
+- références naïves servant de points de comparaison ;
+- modèles économétriques adaptés aux données de panel ;
+- régularisation linéaire avec Ridge et Elastic Net ;
+- algorithmes de Machine Learning supervisé ;
+- modèles intégrant les effets temporels, individuels et sectoriels.
+
+Les performances sont évaluées hors échantillon avec des indicateurs adaptés,
+notamment la MAE, la RMSE et, lorsque son interprétation est pertinente, la
+variation relative de l’erreur.
+
+## Organisation du projet
+
+```text
+.
+├── 01_find_company_websites.py
+├── 02_download_reports.py
+├── 03_extract_financials.py
+├── 04_build_dataset.py
+├── 05_audit_coverage.py
+├── 06_clean_manifest.py
+├── 07_extract_all.py
+├── 08_sources_et_scraping.py
+├── 09_validation_et_diagnostics.py
+├── 10_construction_du_panel.py
+├── 11_analyse_modelisation_prevision.py
+├── 12_variables_externes_et_univers.py
+├── 13_collecte_et_integration_2024_2025.py
+├── 14_integration_historique.py
+├── data/
+│   ├── input/
+│   ├── intermediate/
+│   └── output/
+├── REGROUPEMENT_SCRIPTS.json
+└── requirements.txt
+```
+
+Les scripts `01_` à `07_` forment le pipeline initial. Les scripts `08_` à
+`14_` regroupent les traitements complémentaires par thème afin de conserver
+une base de code lisible et maintenable. Le fichier
+`REGROUPEMENT_SCRIPTS.json` assure la traçabilité des anciennes étapes après
+leur regroupement.
 
 ## Installation
 
+Prérequis : Python 3.10 ou une version ultérieure.
+
 ```bash
 python -m venv .venv
+```
+
+Sous Windows :
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Exécution du pipeline initial
+Sous Linux ou macOS :
+
+```bash
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## Exécution
+
+Le pipeline initial peut être exécuté dans l’ordre suivant :
 
 ```bash
 python 01_find_company_websites.py
@@ -68,15 +147,34 @@ python 06_clean_manifest.py
 python 07_extract_all.py
 ```
 
-Les scripts regroupés peuvent lister leurs anciennes étapes avec :
+Pour afficher les traitements disponibles dans un script regroupé :
 
 ```bash
 python 13_collecte_et_integration_2024_2025.py --list
 ```
 
-## Avertissement
+## Principes de qualité
 
-Les données proviennent de publications financières publiques. Les
-prévisions produites dans ce projet sont expérimentales et ne constituent
-ni une information fiscale officielle ni un conseil financier.
+- traçabilité de la source et de l’année de chaque observation ;
+- conservation de la nature sociale ou consolidée des comptes ;
+- harmonisation des noms d’entreprises et des unités monétaires ;
+- contrôle des doublons et des valeurs aberrantes ;
+- mesure explicite du taux de couverture de chaque variable ;
+- prévention des fuites de données pendant la validation ;
+- comparaison systématique avec un modèle naïf ;
+- reproductibilité des transformations et des résultats.
 
+## Technologies utilisées
+
+- Python
+- pandas et NumPy
+- scikit-learn
+- statsmodels
+- openpyxl
+
+## Autrice
+
+**Inas Ait Benaddi**
+
+Projet réalisé dans le cadre d’un stage consacré à la modélisation et à la
+prévision de l’Impôt sur les Sociétés.
