@@ -88,6 +88,7 @@ def run_script(script_name: str) -> None:
 
 
 def main() -> None:
+    """Afficher le catalogue interne ou lancer une intégration historique."""
     parser = argparse.ArgumentParser(
         description="Lister ou exécuter une étape historique regroupée."
     )

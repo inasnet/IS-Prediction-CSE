@@ -15,12 +15,14 @@ OUTPUT_XLSX = BASE_DIR / "data" / "intermediate" / "ammc_reports_manifest_clean.
 
 
 def main() -> None:
+    """Dédupliquer le manifeste et isoler les associations société–émetteur invalides."""
     downloader = runpy.run_path(str(BASE_DIR / "02_download_reports.py"))
     issuer_matches = downloader["issuer_matches"]
     data = pd.read_csv(SOURCE)
     data["downloaded_at_parsed"] = pd.to_datetime(
         data["downloaded_at"], errors="coerce"
     )
+    # En cas de doublon, la tentative la plus récente constitue la référence.
     data.sort_values("downloaded_at_parsed", inplace=True, na_position="first")
     data = data.drop_duplicates(
         ["requested_company", "detail_url"], keep="last"
@@ -32,6 +34,7 @@ def main() -> None:
         ),
         axis=1,
     )
+    # Les associations rejetées sont conservées dans une feuille dédiée à l'audit.
     invalid = data[~data["association_valide"]].copy()
     clean = data[data["association_valide"]].copy()
     clean.drop(columns=["downloaded_at_parsed"], inplace=True)

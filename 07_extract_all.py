@@ -15,6 +15,7 @@ LOG_FILE = BASE_DIR / "logs" / "extract_all.log"
 
 
 def main() -> None:
+    """Lancer l'extraction pour toutes les sociétés téléchargées avec journalisation."""
     manifest = pd.read_csv(MANIFEST)
     companies = sorted(
         manifest.loc[manifest["status"].eq("downloaded"), "requested_company"]
@@ -22,6 +23,7 @@ def main() -> None:
         .unique()
     )
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Un journal unique permet de diagnostiquer une société sans interrompre le lot.
     with LOG_FILE.open("a", encoding="utf-8") as log:
         for index, company in enumerate(companies, start=1):
             message = f"[{index}/{len(companies)}] {company}"
@@ -39,6 +41,7 @@ def main() -> None:
                 stdout=log,
                 stderr=log,
             )
+            # Une erreur individuelle est enregistrée, puis le traitement continue.
             if result.returncode:
                 error = f"ERREUR {result.returncode} : {company}"
                 print(error, flush=True)

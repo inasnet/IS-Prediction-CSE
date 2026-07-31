@@ -38,12 +38,14 @@ ALIASES = {
 
 
 def normalize(value: object) -> str:
+    """Créer une forme canonique d'un nom de société ou d'émetteur."""
     text = unicodedata.normalize("NFKD", str(value or ""))
     text = "".join(char for char in text if not unicodedata.combining(char))
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", text.lower())).strip()
 
 
 def matches(company: str, issuer: str) -> bool:
+    """Tester la correspondance entre une société cible et un émetteur AMMC."""
     company_n = normalize(company)
     issuer_n = normalize(issuer)
     if not company_n or not issuer_n:
@@ -73,6 +75,7 @@ def matches(company: str, issuer: str) -> bool:
 
 
 def main() -> None:
+    """Mesurer la couverture annuelle et exporter les années manquantes."""
     companies = pd.read_excel(COMPANIES_FILE, sheet_name="Societes")
     catalog = pd.read_excel(CATALOG_FILE, sheet_name="Catalogue AMMC")
     catalog = catalog[
@@ -82,6 +85,7 @@ def main() -> None:
 
     detail_rows: list[dict] = []
     summary_rows: list[dict] = []
+    # L'audit est effectué séparément pour la fenêtre de cotation de chaque société.
     for _, company_row in companies.iterrows():
         company = str(company_row["Société"]).strip()
         start = max(2000, int(company_row.get("Année début", 2000)))
@@ -136,6 +140,7 @@ def main() -> None:
             )
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Le classeur sépare la synthèse, les rapprochements et les lacunes à traiter.
     with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl") as writer:
         summary.to_excel(writer, sheet_name="Résumé", index=False)
         details.to_excel(writer, sheet_name="Fiches rapprochées", index=False)

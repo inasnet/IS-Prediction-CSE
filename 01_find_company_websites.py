@@ -1,3 +1,11 @@
+"""Identifier et valider le site officiel de chaque entreprise étudiée.
+
+Le script combine une recherche web, un score de similarité et une validation
+du contenu de la page d'accueil. Un cache local évite de répéter les recherches
+déjà effectuées. La sortie conserve le meilleur candidat ainsi que les éléments
+qui permettent d'auditer ce choix.
+"""
+
 from __future__ import annotations
 
 import json
@@ -14,6 +22,10 @@ import requests
 from bs4 import BeautifulSoup
 from ddgs import DDGS
 
+
+# =============================================================================
+# CONFIGURATION DES ENTRÉES, SORTIES ET PARAMÈTRES DE RECHERCHE
+# =============================================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 INPUT_FILE = BASE_DIR / "data" / "input" / "societes.xlsx"
@@ -93,8 +105,13 @@ BAD_PAGE_HINTS = {
 }
 
 
+# =============================================================================
+# STRUCTURE D'UN SITE CANDIDAT
+# =============================================================================
+
 @dataclass
 class Candidate:
+    """Informations et scores associés à un site potentiellement officiel."""
     company: str
     url: str
     domain: str
@@ -111,7 +128,12 @@ class Candidate:
     reason: str = ""
 
 
+# =============================================================================
+# NORMALISATION ET CALCUL DES SCORES
+# =============================================================================
+
 def normalize_text(value: str) -> str:
+    """Normaliser un texte pour rendre les comparaisons robustes aux accents."""
     value = str(value or "")
     value = unicodedata.normalize("NFKD", value)
     value = "".join(c for c in value if not unicodedata.combining(c))
@@ -121,6 +143,7 @@ def normalize_text(value: str) -> str:
 
 
 def company_tokens(company: str) -> list[str]:
+    """Extraire les mots distinctifs du nom d'une entreprise."""
     tokens = [
         token for token in normalize_text(company).split()
         if len(token) >= 3 and token not in GENERIC_WORDS
@@ -129,6 +152,7 @@ def company_tokens(company: str) -> list[str]:
 
 
 def canonical_domain(url: str) -> str:
+    """Extraire un nom de domaine canonique, sans préfixe technique."""
     try:
         domain = urlparse(url).netloc.lower().split(":")[0]
     except Exception:
@@ -139,6 +163,7 @@ def canonical_domain(url: str) -> str:
 
 
 def root_url(url: str) -> str:
+    """Ramener une URL vers la racine de son domaine."""
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
         return url
@@ -146,11 +171,13 @@ def root_url(url: str) -> str:
 
 
 def is_excluded_domain(domain: str) -> bool:
+    """Écarter les médias, annuaires et plateformes qui ne sont pas officiels."""
     domain = domain.lower()
     return any(domain == bad or domain.endswith("." + bad) for bad in EXCLUDED_DOMAINS)
 
 
 def domain_similarity(company: str, domain: str) -> int:
+    """Mesurer la proximité entre la dénomination et le domaine candidat."""
     compact_domain = re.sub(r"[^a-z0-9]", "", normalize_text(domain))
     tokens = company_tokens(company)
     if not tokens:
@@ -174,6 +201,7 @@ def domain_similarity(company: str, domain: str) -> int:
 
 
 def text_similarity(company: str, text: str) -> int:
+    """Mesurer la présence des termes distinctifs de l'entreprise dans un texte."""
     text_n = normalize_text(text)
     tokens = company_tokens(company)
     if not tokens:
@@ -190,6 +218,7 @@ def text_similarity(company: str, text: str) -> int:
 
 
 def search_queries(company: str) -> list[str]:
+    """Construire plusieurs requêtes complémentaires pour une même société."""
     return [
         f'"{company}" site officiel Maroc',
         f'"{company}" official website Morocco',
@@ -200,6 +229,7 @@ def search_queries(company: str) -> list[str]:
 
 
 def safe_search(query: str) -> list[dict]:
+    """Exécuter une recherche web en contrôlant les erreurs et le délai."""
     try:
         return DDGS(timeout=12).text(
             query,
@@ -214,6 +244,7 @@ def safe_search(query: str) -> list[dict]:
 
 
 def build_candidates(company: str) -> list[Candidate]:
+    """Fusionner les résultats de recherche en candidats uniques et scorés."""
     by_domain: dict[str, Candidate] = {}
 
     for query in search_queries(company):
@@ -269,6 +300,7 @@ def build_candidates(company: str) -> list[Candidate]:
 
 
 def fetch_page(session: requests.Session, url: str) -> tuple[int | None, str, str]:
+    """Télécharger une page et renvoyer son statut, son URL finale et son texte."""
     try:
         response = session.get(
             url,
@@ -285,6 +317,7 @@ def fetch_page(session: requests.Session, url: str) -> tuple[int | None, str, st
 
 
 def inspect_homepage(company: str, candidate: Candidate, session: requests.Session) -> Candidate:
+    """Valider un candidat à partir du contenu réel de sa page d'accueil."""
     status_code, final_url, html = fetch_page(session, candidate.url)
     candidate.status_code = status_code
     candidate.final_url = final_url or candidate.url
@@ -384,6 +417,7 @@ def inspect_homepage(company: str, candidate: Candidate, session: requests.Sessi
 
 
 def confidence_label(score: int) -> str:
+    """Traduire le score numérique en niveau de confiance interprétable."""
     if score >= 135:
         return "Élevée"
     if score >= MIN_ACCEPTED_SCORE:
@@ -392,6 +426,7 @@ def confidence_label(score: int) -> str:
 
 
 def load_cache() -> dict:
+    """Relire les recherches déjà effectuées, si le cache existe."""
     if not CACHE_FILE.exists():
         return {}
     try:
@@ -401,6 +436,7 @@ def load_cache() -> dict:
 
 
 def save_cache(cache: dict) -> None:
+    """Persister le cache de manière lisible et compatible avec les accents."""
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     CACHE_FILE.write_text(
         json.dumps(cache, ensure_ascii=False, indent=2),
@@ -409,6 +445,7 @@ def save_cache(cache: dict) -> None:
 
 
 def load_companies() -> pd.DataFrame:
+    """Charger et contrôler la liste des entreprises à rechercher."""
     if not INPUT_FILE.exists():
         raise FileNotFoundError(
             f"Fichier introuvable : {INPUT_FILE}\n"
@@ -430,6 +467,7 @@ def load_companies() -> pd.DataFrame:
 
 
 def choose_best_candidate(candidates: Iterable[Candidate]) -> Candidate | None:
+    """Sélectionner le candidat admissible ayant obtenu le meilleur score."""
     valid = [
         c for c in candidates
         if not c.excluded
@@ -442,6 +480,7 @@ def choose_best_candidate(candidates: Iterable[Candidate]) -> Candidate | None:
 
 
 def main() -> None:
+    """Orchestrer la recherche, la validation et l'export des sites officiels."""
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 

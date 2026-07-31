@@ -68,6 +68,7 @@ ILLEGAL_EXCEL_RE = re.compile(r"[\x00-\x08\x0b-\x0c\x0e-\x1f]")
 
 
 def normalize(value: str) -> str:
+    """Uniformiser le texte extrait afin de fiabiliser les recherches regex."""
     value = unicodedata.normalize("NFKD", str(value))
     value = "".join(c for c in value if not unicodedata.combining(c))
     value = value.lower().replace("\u00a0", " ")
@@ -75,6 +76,7 @@ def normalize(value: str) -> str:
 
 
 def parse_number(raw: str) -> float | None:
+    """Convertir une représentation comptable française en nombre Python."""
     value = raw.strip()
     negative_parentheses = value.startswith("(") and value.endswith(")")
     value = value.strip("() ").replace("\u00a0", "").replace(" ", "")
@@ -95,6 +97,7 @@ def parse_number(raw: str) -> float | None:
 
 
 def detect_unit(page_text: str, context: str) -> tuple[str, float]:
+    """Détecter l'unité monétaire et renvoyer son multiplicateur vers le MAD."""
     search = normalize(context + " " + page_text[:2500])
     if re.search(r"en\s+(?:milliards?|mds?)\s+(?:de\s+)?dirhams|gdh", search):
         return "milliards MAD", 1_000_000_000.0
@@ -108,6 +111,7 @@ def detect_unit(page_text: str, context: str) -> tuple[str, float]:
 
 
 def detect_accounts(page_text: str, line_index: int, lines: list[str]) -> str:
+    """Déterminer si la valeur vient de comptes sociaux ou consolidés."""
     local = normalize(" ".join(lines[max(0, line_index - 18): line_index + 5]))
     page = normalize(page_text)
     if "consolide" in local:
@@ -124,12 +128,14 @@ def detect_accounts(page_text: str, line_index: int, lines: list[str]) -> str:
 
 
 def filename_year(path: Path) -> int | None:
+    """Rechercher une année plausible dans le nom du fichier source."""
     years = [int(x) for x in YEAR_RE.findall(path.stem)]
     years = [x for x in years if 2000 <= x <= 2025]
     return years[0] if years else None
 
 
 def detect_document_year(document: fitz.Document, path: Path) -> tuple[int | None, str]:
+    """Identifier l'exercice du document et indiquer la méthode de détection."""
     indexes = list(range(min(15, len(document))))
     indexes += list(range(max(0, len(document) - 4), len(document)))
     text = normalize(" ".join(document[index].get_text("text") for index in sorted(set(indexes))))
@@ -166,6 +172,7 @@ def detect_document_year(document: fitz.Document, path: Path) -> tuple[int | Non
 
 
 def extract_pdf(path: Path, company: str) -> list[dict]:
+    """Extraire tous les candidats financiers repérés dans un document PDF."""
     rows: list[dict] = []
     document = fitz.open(path)
     document_year, year_source = detect_document_year(document, path)
@@ -224,6 +231,7 @@ def extract_pdf(path: Path, company: str) -> list[dict]:
 
 
 def main() -> None:
+    """Piloter l'extraction d'une entreprise et enregistrer la table de candidats."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--company", default="cosumar")
     args = parser.parse_args()

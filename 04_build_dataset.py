@@ -15,6 +15,7 @@ OUTPUT_DIR = BASE_DIR / "data" / "output"
 
 
 def score_candidate(row: pd.Series) -> int:
+    """Attribuer un score de fiabilité à une valeur financière candidate."""
     score = 0
     label = str(row.get("libelle_trouve", "")).lower()
     context = str(row.get("contexte", "")).lower()
@@ -67,11 +68,13 @@ def score_candidate(row: pd.Series) -> int:
 
 
 def add_validation_flags(best: pd.DataFrame) -> pd.DataFrame:
+    """Ajouter des alertes métier aux candidats classés en première position."""
     best = best.copy()
     best["alertes_validation"] = ""
     best["nombre_alertes"] = 0
 
     def flag(index: int, message: str) -> None:
+        """Cumuler une alerte sans écraser les contrôles déjà enregistrés."""
         existing = best.at[index, "alertes_validation"]
         best.at[index, "alertes_validation"] = (
             f"{existing}; {message}".strip("; ") if existing else message
@@ -134,6 +137,7 @@ def add_validation_flags(best: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
+    """Classer les candidats et produire les feuilles de contrôle Excel."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--company", default="cosumar")
     parser.add_argument("--top", type=int, default=5)
@@ -148,6 +152,7 @@ def main() -> None:
     if not source.exists():
         raise SystemExit(f"Fichier absent : {source}")
 
+    # Le filtrage temporel garantit la cohérence avec la période de l'étude.
     data = pd.read_excel(source)
     data = data[data["annee_rapport"].between(2000, 2025, inclusive="both")].copy()
     data["score_fiabilite"] = data.apply(score_candidate, axis=1)
@@ -155,6 +160,7 @@ def main() -> None:
     data.sort_values(keys + ["score_fiabilite"], ascending=[True] * 4 + [False], inplace=True)
     data["rang_candidat"] = data.groupby(keys, dropna=False).cumcount() + 1
 
+    # On conserve plusieurs candidats pour l'audit, mais un seul pour le panel.
     shortlist = data[data["rang_candidat"] <= args.top].copy()
     best = shortlist[shortlist["rang_candidat"] == 1].copy()
     best = add_validation_flags(best)
@@ -176,6 +182,7 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / f"{slug}_variables_controle.xlsx"
+    # Chaque feuille répond à un besoin distinct : sélection, audit ou couverture.
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         best.to_excel(writer, sheet_name="Meilleurs candidats", index=False)
         strong.to_excel(writer, sheet_name="Préselection forte", index=False)

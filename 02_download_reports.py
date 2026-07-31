@@ -127,6 +127,7 @@ COMPANY_ALIASES = {
 
 @dataclass
 class Company:
+    """Entreprise cible et période annuelle à couvrir."""
     name: str
     sector: str
     year_start: int
@@ -134,11 +135,13 @@ class Company:
 
     @property
     def slug(self) -> str:
+        """Identifiant de l'entreprise compatible avec un nom de dossier."""
         return slugify(self.name)
 
 
 @dataclass
 class CatalogRow:
+    """Référence d'une publication repérée dans le catalogue AMMC."""
     issuer: str
     year: int
     report_type: str
@@ -148,6 +151,7 @@ class CatalogRow:
 
 @dataclass
 class DetailRow:
+    """Publication enrichie avec le lien direct vers sa pièce jointe."""
     issuer: str
     year: int
     report_type: str
@@ -158,6 +162,7 @@ class DetailRow:
 
 @dataclass
 class ManifestRow:
+    """Trace complète d'une tentative de téléchargement et de son résultat."""
     requested_company: str
     ammc_issuer: str
     sector: str
@@ -180,6 +185,7 @@ class ManifestRow:
 # =============================================================================
 
 def normalize_text(value: str) -> str:
+    """Normaliser les libellés avant les opérations de rapprochement."""
     value = unicodedata.normalize("NFKD", str(value or ""))
     value = "".join(
         character
@@ -192,10 +198,12 @@ def normalize_text(value: str) -> str:
 
 
 def slugify(value: str) -> str:
+    """Produire un identifiant stable utilisable dans un chemin de fichier."""
     return normalize_text(value).replace(" ", "_").strip("_")
 
 
 def sanitize_filename(value: str) -> str:
+    """Nettoyer un nom de fichier reçu depuis une source distante."""
     value = requests.utils.unquote(value)
     value = unicodedata.normalize("NFKD", value)
     value = "".join(
@@ -209,6 +217,7 @@ def sanitize_filename(value: str) -> str:
 
 
 def is_annual_type(report_type: str) -> bool:
+    """Retenir les publications annuelles et exclure les fréquences infra-annuelles."""
     normalized = normalize_text(report_type)
 
     if any(normalize_text(item) in normalized for item in EXCLUDE):
@@ -221,6 +230,7 @@ def is_annual_type(report_type: str) -> bool:
 
 
 def issuer_matches(company_name: str, issuer_name: str) -> bool:
+    """Rapprocher une société cible d'un émetteur en tenant compte des alias."""
     company = normalize_text(company_name)
     issuer = normalize_text(issuer_name)
 
@@ -258,6 +268,7 @@ def issuer_matches(company_name: str, issuer_name: str) -> bool:
 
 
 def sha256_file(path: Path) -> str:
+    """Calculer l'empreinte du fichier pour détecter les doublons exacts."""
     digest = hashlib.sha256()
 
     with path.open("rb") as file:
@@ -268,6 +279,7 @@ def sha256_file(path: Path) -> str:
 
 
 def setup_logging(verbose: bool) -> None:
+    """Configurer la journalisation vers le terminal et le fichier de suivi."""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
@@ -282,6 +294,7 @@ def setup_logging(verbose: bool) -> None:
 
 
 def create_session() -> requests.Session:
+    """Créer une session HTTP réutilisable avec les en-têtes du projet."""
     session = requests.Session()
     session.headers.update(HEADERS)
 
@@ -297,6 +310,7 @@ def create_session() -> requests.Session:
 
 
 def load_companies() -> list[Company]:
+    """Charger l'univers des sociétés et valider leurs bornes temporelles."""
     if not INPUT_FILE.exists():
         raise FileNotFoundError(f"Fichier introuvable : {INPUT_FILE}")
 
@@ -341,6 +355,7 @@ def get_soup(
     session: requests.Session,
     url: str,
 ) -> BeautifulSoup:
+    """Télécharger une page HTML et la convertir en arbre analysable."""
     response = session.get(
         url,
         timeout=(CONNECT_TIMEOUT, REQUEST_TIMEOUT),
@@ -350,6 +365,7 @@ def get_soup(
 
 
 def detect_last_page(soup: BeautifulSoup) -> int:
+    """Déduire la dernière page disponible dans la pagination du catalogue."""
     pages = [0]
 
     for link in soup.find_all("a", href=True):
@@ -366,6 +382,7 @@ def parse_catalog_page(
     soup: BeautifulSoup,
     source_page: int,
 ) -> list[CatalogRow]:
+    """Extraire les publications présentes sur une page du catalogue."""
     rows: list[CatalogRow] = []
 
     # La vue Drupal de l'AMMC contient généralement un tableau.
@@ -467,6 +484,8 @@ def crawl_catalog(
     session: requests.Session,
     max_pages: int | None = None,
 ) -> list[CatalogRow]:
+    """Extraire les publications présentes sur une page du catalogue."""
+    """Parcourir le catalogue AMMC et collecter les publications annuelles."""
     logging.info("Lecture de la première page du catalogue AMMC…")
     first_soup = get_soup(session, AMMC_LIST_URL)
     last_page = detect_last_page(first_soup)
@@ -487,6 +506,7 @@ def crawl_catalog(
     )
 
     def fetch_catalog_page(page: int) -> tuple[int, list[CatalogRow]]:
+        """Collecter une page avec une session HTTP propre au traitement."""
         # Une session par tâche évite de partager l'état HTTP entre threads.
         local_session = create_session()
         url = f"{AMMC_LIST_URL}?page={page}"
@@ -526,6 +546,7 @@ def crawl_catalog(
 
 
 def save_catalog(rows: list[CatalogRow]) -> None:
+    """Enregistrer le catalogue collecté sous une forme tabulaire contrôlable."""
     dataframe = pd.DataFrame([asdict(row) for row in rows])
 
     CATALOG_XLSX.parent.mkdir(parents=True, exist_ok=True)
@@ -557,6 +578,7 @@ def load_or_build_catalog(
     refresh: bool,
     max_pages: int | None,
 ) -> list[CatalogRow]:
+    """Réutiliser le catalogue local ou le reconstruire selon les options."""
     if CATALOG_XLSX.exists() and not refresh:
         dataframe = pd.read_excel(
             CATALOG_XLSX,
@@ -596,6 +618,7 @@ def parse_detail_page(
     session: requests.Session,
     catalog_row: CatalogRow,
 ) -> DetailRow:
+    """Extraire le lien direct depuis la fiche d'une publication."""
     soup = get_soup(session, catalog_row.detail_url)
 
     page_text = soup.get_text(" ", strip=True)
@@ -673,6 +696,7 @@ def parse_detail_page(
 # =============================================================================
 
 def load_manifest() -> pd.DataFrame:
+    """Charger le manifeste existant pour permettre une reprise sans perte."""
     if MANIFEST_CSV.exists():
         try:
             return pd.read_csv(MANIFEST_CSV)
@@ -685,6 +709,7 @@ def load_manifest() -> pd.DataFrame:
 def manifest_dataframe_to_rows(
     dataframe: pd.DataFrame,
 ) -> list[ManifestRow]:
+    """Restaurer les objets du manifeste depuis leur table sauvegardée."""
     if dataframe.empty:
         return []
 
@@ -725,6 +750,7 @@ def manifest_dataframe_to_rows(
 
 
 def save_manifest(rows: list[ManifestRow]) -> None:
+    """Sauvegarder l'état détaillé des téléchargements en CSV et en Excel."""
     dataframe = pd.DataFrame([asdict(row) for row in rows])
 
     MANIFEST_CSV.parent.mkdir(parents=True, exist_ok=True)
@@ -782,6 +808,7 @@ def download_pdf(
     detail: DetailRow,
     known_hashes: dict[str, str],
 ) -> ManifestRow:
+    """Télécharger, contrôler et référencer une pièce jointe financière."""
     temp_dir = INTERMEDIATE_DIR / "tmp_ammc"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -944,6 +971,7 @@ def select_catalog_rows(
     company: Company,
     catalog: list[CatalogRow],
 ) -> list[CatalogRow]:
+    """Sélectionner les publications correspondant à l'entreprise et à sa période."""
     selected = [
         row
         for row in catalog
@@ -980,6 +1008,8 @@ def process_company(
     manifest_rows: list[ManifestRow],
     preview: bool,
 ) -> list[ManifestRow]:
+    """Restaurer les objets du manifeste depuis leur table sauvegardée."""
+    """Traiter toutes les publications compatibles avec une société cible."""
     logging.info("=" * 74)
     logging.info("ENTREPRISE : %s", company.name)
     logging.info("=" * 74)
@@ -1089,6 +1119,7 @@ def process_company(
 
 
 def parse_arguments() -> argparse.Namespace:
+    """Lire les options de reprise, de parallélisme et de filtrage."""
     parser = argparse.ArgumentParser(
         description=(
             "Télécharge les états financiers annuels depuis l'AMMC."
@@ -1138,6 +1169,7 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Orchestrer la collecte et produire un manifeste reproductible."""
     arguments = parse_arguments()
     setup_logging(arguments.verbose)
 
