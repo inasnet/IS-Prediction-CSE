@@ -20,6 +20,8 @@ import argparse
 import os
 from pathlib import Path
 
+import pandas as pd
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Chaque valeur contient, sans modification, le code source de l'ancien script.
@@ -83,6 +85,1565 @@ def run_script(script_name: str) -> None:
         os.chdir(previous_directory)
 
 
+def complete_priority_2024() -> None:
+    """Compléter un premier lot 2024 vérifié sans écraser la base v26.
+
+    Les montants proviennent des colonnes comparatives des publications 2025.
+    Seules les cases encore vides sont complétées. Les valeurs d'IS et leur
+    statut ne sont pas modifiés par cette opération.
+    """
+    output_dir = PROJECT_ROOT / "data" / "output"
+    source_xlsx = output_dir / "base_is_financiere_finale_v26.xlsx"
+    source_csv = output_dir / "panel_historique_final_v26.csv"
+    target_xlsx = output_dir / "base_is_financiere_finale_v27.xlsx"
+    target_csv = output_dir / "panel_historique_final_v27.csv"
+    trace_file = output_dir / "controle_completion_prioritaire_2024_v27.xlsx"
+
+    # Les cinq variables centrales sont renseignées dans le même périmètre
+    # comptable que l'IS déjà associé à l'observation entreprise-année.
+    verified = [
+        {
+            "societe": "Balima",
+            "annee": 2024,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 14_280_669.00,
+            "capitaux_propres": 128_892_668.00,
+            "resultat_avant_impot": 20_777_751.00,
+            "chiffre_affaires": 63_152_948.00,
+            "immobilisations_corporelles": 87_272_662.00,
+            "source": "RFA Balima 2025, comptes consolidés comparatifs 2024",
+            "pages": "p.44-45 et p.60",
+        },
+        {
+            "societe": "Microdata",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 67_814_205.42,
+            "capitaux_propres": 193_090_661.08,
+            "resultat_avant_impot": 91_955_293.42,
+            "chiffre_affaires": 900_445_777.78,
+            "immobilisations_corporelles": 14_079_604.56,
+            "source": "RFA Microdata 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.14-15 et états sociaux p.21-24",
+        },
+        {
+            "societe": "Unimer",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": -23_508_152.99,
+            "capitaux_propres": 1_532_049_342.84,
+            "resultat_avant_impot": -20_822_670.99,
+            "chiffre_affaires": 806_449_256.64,
+            "immobilisations_corporelles": 147_870_937.92,
+            "source": "RFA Unimer 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.48-51",
+            "corrections_autorisees": {
+                "chiffre_affaires": (
+                    "La valeur antérieure de 61 M MAD provenait des numéros "
+                    "de pages 60-61 ; le CPC social publie 806 449 256,64 MAD."
+                )
+            },
+        },
+        {
+            "societe": "DISTY RFA",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 19_364_056.78,
+            "capitaux_propres": 175_625_645.78,
+            "resultat_avant_impot": 22_293_214.78,
+            "chiffre_affaires": 547_834_555.13,
+            "immobilisations_corporelles": 2_163_010.08,
+            "source": "RFA Disty Technologies 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.40-49",
+        },
+        {
+            "societe": "DELTA HOLDING S.A",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 176_151_674.63,
+            "capitaux_propres": 1_781_003_527.76,
+            "resultat_avant_impot": 185_643_175.63,
+            "chiffre_affaires": 64_222_892.42,
+            "immobilisations_corporelles": 16_508_148.97,
+            "source": "RFA Delta Holding 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.25-28",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "Le CPC social 2024 publie 176 151 674,63 MAD ; avec le "
+                    "RCAI et l'IS existant, l'identité fiscale est exacte."
+                ),
+                "capitaux_propres": (
+                    "Le bilan social comparatif 2024 publie "
+                    "1 781 003 527,76 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "Atlanta",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 456_350_915.23,
+            "capitaux_propres": 4_029_546_016.08,
+            "resultat_avant_impot": 511_264_379.23,
+            # Le chiffre d'affaires d'une assurance n'est pas forcé à partir
+            # des produits totaux, qui ne sont pas directement comparables.
+            "chiffre_affaires": pd.NA,
+            "immobilisations_corporelles": 116_051_432.93,
+            "source": "RFA AtlantaSanad 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.120-124",
+        },
+        {
+            "societe": "Cosumar",
+            "annee": 2022,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 856_457_574.42,
+            "capitaux_propres": 4_216_647_389.13,
+            "resultat_avant_impot": 1_206_407_816.42,
+            "chiffre_affaires": 9_293_598_547.40,
+            "immobilisations_corporelles": 1_836_204_732.82,
+            "source": "RFA Cosumar 2023, comptes sociaux comparatifs 2022",
+            "pages": "p.193-195 du rapport (PDF p.97-98)",
+            "corrections_autorisees": {
+                "capitaux_propres": "Remplacement par le total des capitaux propres du bilan social.",
+            },
+        },
+        {
+            "societe": "Microdata",
+            "annee": 2022,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 42_613_398.37,
+            "capitaux_propres": 167_193_647.01,
+            "resultat_avant_impot": 62_682_699.37,
+            "chiffre_affaires": 694_841_840.09,
+            "immobilisations_corporelles": 15_156_203.53,
+            "source": "RFA Microdata 2023, comptes sociaux comparatifs 2022",
+            "pages": "PDF p.45-48",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": (
+                    "Le bilan social publie une valeur nette de 15 156 203,53 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "Microdata",
+            "annee": 2023,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 57_202_808.65,
+            "capitaux_propres": 182_396_455.66,
+            "resultat_avant_impot": 80_474_971.65,
+            "chiffre_affaires": 751_169_851.53,
+            "immobilisations_corporelles": 14_511_031.48,
+            "source": "RFA Microdata 2024, comptes sociaux comparatifs 2023",
+            "pages": "PDF p.20-24",
+            "corrections_autorisees": {
+                "chiffre_affaires": (
+                    "Remplacement de la valeur arrondie par le montant exact du CPC social."
+                ),
+            },
+        },
+        {
+            "societe": "Unimer",
+            "annee": 2022,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 33_041_450.96,
+            "capitaux_propres": 1_564_261_823.89,
+            "resultat_avant_impot": 45_442_423.96,
+            "chiffre_affaires": 897_687_894.27,
+            "immobilisations_corporelles": 173_047_613.41,
+            "source": "RFA Unimer 2023, comptes sociaux comparatifs 2022",
+            "pages": "PDF p.21-22",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": (
+                    "Correction d'un facteur 1 000 et sélection de la colonne nette comparative."
+                ),
+            },
+        },
+        {
+            "societe": "Unimer",
+            "annee": 2023,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 14_123_431.94,
+            "capitaux_propres": 1_566_971_375.83,
+            "resultat_avant_impot": 20_314_000.94,
+            "chiffre_affaires": 904_614_741.30,
+            "immobilisations_corporelles": 156_988_098.21,
+            "source": "RFA Unimer 2024, comptes sociaux comparatifs 2023",
+            "pages": "PDF p.21-22",
+            "corrections_autorisees": {
+                "capitaux_propres": "Correction d'un facteur 1 000 issu de l'unité mal détectée.",
+                "immobilisations_corporelles": (
+                    "Correction d'un facteur 1 000 et sélection de la valeur nette."
+                ),
+            },
+        },
+        {
+            "societe": "Lydec",
+            "annee": 2022,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 11_023_665.73,
+            "capitaux_propres": 1_779_636_817.98,
+            "resultat_avant_impot": 91_357_868.73,
+            "chiffre_affaires": 7_380_908_784.86,
+            "immobilisations_corporelles": 54_186_092.91,
+            "source": "RFA Lydec 2023, comptes sociaux comparatifs 2022",
+            "pages": "PDF p.112-113",
+            "corrections_autorisees": {
+                "chiffre_affaires": (
+                    "La valeur antérieure provenait d'un indicateur arrondi en MDH ; "
+                    "le montant retenu est la somme des ventes publiée dans le CPC social."
+                ),
+            },
+        },
+        {
+            "societe": "Lydec",
+            "annee": 2023,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 38_386_450.93,
+            "capitaux_propres": 1_818_023_268.91,
+            "resultat_avant_impot": 165_694_775.75,
+            "chiffre_affaires": 7_598_475_749.67,
+            "immobilisations_corporelles": 57_708_422.14,
+            "source": "RFA Lydec 2023, comptes sociaux 2023",
+            "pages": "PDF p.112-113",
+            "corrections_autorisees": {
+                "chiffre_affaires": (
+                    "La valeur antérieure était un indicateur arrondi mal mis à l'échelle ; "
+                    "le CPC social publie les deux composantes des ventes."
+                ),
+            },
+        },
+        {
+            "societe": "Risma",
+            "annee": 2023,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 233_324_339.41,
+            "capitaux_propres": 2_151_334_485.08,
+            "resultat_avant_impot": 235_634_865.64,
+            "chiffre_affaires": 889_035_566.53,
+            "immobilisations_corporelles": 1_827_128_670.64,
+            "source": "RFA Risma 2024, comptes sociaux comparatifs 2023",
+            "pages": "p.98-101 du rapport (PDF p.50-51)",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": (
+                    "La valeur antérieure ne correspondait pas à la colonne nette "
+                    "comparative du bilan social de Risma SA."
+                ),
+            },
+        },
+        {
+            "societe": "Managem",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 215_924_925.23,
+            "capitaux_propres": 6_360_493_281.12,
+            "resultat_avant_impot": 251_343_203.23,
+            "chiffre_affaires": 467_157_384.92,
+            "immobilisations_corporelles": 64_022_487.37,
+            "source": "RFA Managem 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.140-143 du rapport (PDF p.71-72)",
+            "corrections_autorisees": {
+                "capitaux_propres": (
+                    "La valeur négative antérieure était une extraction parasite ; "
+                    "le total du bilan social est 6 360 493 281,12 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "SMI",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 397_108_594.01,
+            "capitaux_propres": 1_660_223_158.08,
+            "resultat_avant_impot": 588_164_741.01,
+            "chiffre_affaires": 1_566_033_534.59,
+            "immobilisations_corporelles": 515_420_144.78,
+            "source": "RFA SMI 2025, comptes sociaux 2025",
+            "pages": "p.84-87 du rapport (PDF p.43-44)",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement du montant arrondi par le montant exact du CPC social.",
+                "capitaux_propres": "Remplacement du montant arrondi par le total exact du bilan social.",
+                "chiffre_affaires": "Remplacement du montant arrondi par le montant exact du CPC social.",
+            },
+        },
+        {
+            "societe": "LABEL VIE",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 593_657_993.13,
+            "capitaux_propres": 3_670_153_999.90,
+            "resultat_avant_impot": 831_487_637.41,
+            "chiffre_affaires": 18_534_397_910.76,
+            "immobilisations_corporelles": 4_150_790_956.20,
+            "source": "RFA Label Vie 2025, comptes consolidés 2025",
+            "pages": "p.104-106 du rapport (PDF p.53-54)",
+        },
+        {
+            "societe": "MINIERE TOUISSIT",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 203_399_077.93,
+            "capitaux_propres": 898_404_885.10,
+            "resultat_avant_impot": 325_037_385.93,
+            "chiffre_affaires": 691_209_425.13,
+            "immobilisations_corporelles": 516_547_421.04,
+            "source": "RFA Minière Touissit 2025, comptes sociaux 2025",
+            "pages": "p.76-79 du rapport (PDF p.39-40)",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur -2 provenait du numéro de renvoi (2), pas du résultat net.",
+                "resultat_avant_impot": (
+                    "Le total de l'exercice inclut les opérations concernant les exercices précédents."
+                ),
+                "immobilisations_corporelles": (
+                    "Remplacement du montant brut par la valeur nette du bilan social."
+                ),
+            },
+        },
+        {
+            "societe": "SNEP",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": -192_455_323.51,
+            "capitaux_propres": 535_071_599.49,
+            "resultat_avant_impot": -190_564_625.51,
+            "chiffre_affaires": 745_691_524.57,
+            "immobilisations_corporelles": 572_538_250.51,
+            "source": "RFA SNEP 2025, comptes sociaux 2025",
+            "pages": "p.66-69 du rapport (PDF p.34-35)",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur 2024 arrondie par le résultat social 2025.",
+                "capitaux_propres": "Remplacement par le total des capitaux propres du bilan social 2025.",
+                "resultat_avant_impot": "Remplacement par le total 2025 publié dans le CPC social.",
+                "immobilisations_corporelles": "Remplacement du montant brut par la valeur nette 2025.",
+            },
+        },
+        {
+            "societe": "Maghreb Oxygène",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 8_493_001.13,
+            "capitaux_propres": 261_022_100.75,
+            "resultat_avant_impot": 9_911_380.13,
+            "chiffre_affaires": 332_350_856.51,
+            "immobilisations_corporelles": 255_788_546.70,
+            "source": "RFA Maghreb Oxygène 2025, comptes sociaux 2025",
+            "pages": "p.24-26 du rapport (PDF p.26-28)",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure était un montant mal extrait et mal mis à l'échelle.",
+                "immobilisations_corporelles": "Remplacement du montant brut par la valeur nette du bilan social.",
+            },
+        },
+        {
+            "societe": "Rebab Company",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 1_054_255.05,
+            "capitaux_propres": 25_864_154.36,
+            "resultat_avant_impot": 1_057_255.05,
+            # La rubrique chiffre d'affaires est vide dans le CPC : il s'agit
+            # d'un zéro structurel, les 30 000 MAD étant classés en autres produits.
+            "chiffre_affaires": 0.00,
+            # Aucun actif corporel n'est publié ; l'ancien montant appartenait
+            # aux immobilisations financières (titres de participation).
+            "immobilisations_corporelles": 0.00,
+            "source": "RFA Rebab Company 2025, comptes sociaux 2025",
+            "pages": "PDF p.21-24",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement du montant arrondi et signé à tort par le total du CPC social.",
+                "resultat_avant_impot": "Remplacement du montant arrondi par le total exact du CPC social.",
+                "immobilisations_corporelles": (
+                    "La valeur antérieure correspondait aux immobilisations financières, pas corporelles."
+                ),
+            },
+        },
+        {
+            "societe": "AGMA",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 71_027_537.51,
+            "capitaux_propres": 153_612_030.91,
+            "resultat_avant_impot": 93_667_265.11,
+            "chiffre_affaires": 186_607_885.22,
+            "immobilisations_corporelles": 12_143_733.12,
+            "source": "RFA AGMA 2025, comptes sociaux 2025 (bilan contrôlé visuellement)",
+            "pages": "PDF p.13-15",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure était le résultat 2024 arrondi du tableau comparatif.",
+                "capitaux_propres": "La valeur antérieure était celle de 2024 arrondie.",
+                "resultat_avant_impot": "La valeur antérieure était le RCAI 2024 arrondi.",
+                "chiffre_affaires": "La valeur antérieure était le chiffre d'affaires 2024 arrondi.",
+            },
+        },
+        {
+            "societe": "Risma",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 180_639_924.32,
+            "capitaux_propres": 2_256_730_359.73,
+            "resultat_avant_impot": 186_561_593.58,
+            "chiffre_affaires": 957_104_462.96,
+            "immobilisations_corporelles": 2_006_268_846.31,
+            "source": "RFA Risma 2025, comptes sociaux 2025",
+            "pages": "p.96-100 du rapport (PDF p.49-50)",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur 16,29 était un ratio ou un montant parasite, pas le résultat net.",
+                "capitaux_propres": "Remplacement de la valeur 2024 par le total du bilan social 2025.",
+                "immobilisations_corporelles": "Remplacement de la valeur nette 2024 par celle de 2025.",
+            },
+        },
+        {
+            "societe": "STOKVIS",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 18_030_296.39,
+            "capitaux_propres": 67_623_151.90,
+            "resultat_avant_impot": 18_067_617.39,
+            "chiffre_affaires": 12_447_476.34,
+            "immobilisations_corporelles": 386_100.33,
+            "source": "RFA Stokvis Nord Afrique 2025, comptes sociaux 2025",
+            "pages": "bilan et CPC sociaux, PDF p.10-13; immobilisations nettes PDF p.10",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "La valeur -2 était une extraction parasite ; le CPC social publie "
+                    "un résultat net de 18 030 296,39 MAD."
+                ),
+                "immobilisations_corporelles": (
+                    "La valeur antérieure de 17 847 018,76 MAD correspondait au brut "
+                    "d'ouverture ; le bilan social 2025 publie un net de 386 100,33 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "Sothema",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 325_360_568.66,
+            "capitaux_propres": 2_232_402_013.24,
+            "resultat_avant_impot": 525_976_330.66,
+            "chiffre_affaires": 3_038_826_399.81,
+            "immobilisations_corporelles": 392_575_324.08,
+            "source": "RFA Sothema 2025, comptes sociaux 2025",
+            "pages": "bilan social PDF p.55; CPC social PDF p.56",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "La valeur antérieure ne correspondait pas au résultat net social 2025 ; "
+                    "le CPC certifié publie 325 360 568,66 MAD."
+                ),
+                "immobilisations_corporelles": (
+                    "La valeur antérieure de 1 108 489 109,84 MAD était le brut "
+                    "d'ouverture ; le bilan social publie un net 2025 de 392 575 324,08 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "Lesieur cristal",
+            "annee": 2025,
+            # La ligne source était étiquetée « consolidés », alors que son IS
+            # de 74 601 350 MAD est celui du CPC social certifié.
+            "type_comptes_source": "consolides",
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": -50_266_102.93,
+            "capitaux_propres": 1_505_166_204.75,
+            "resultat_avant_impot": 24_335_247.07,
+            "chiffre_affaires": 4_740_439_473.92,
+            "immobilisations_corporelles": 440_539_319.56,
+            "source": "RFA Lesieur Cristal 2025, comptes sociaux 2025",
+            "pages": "bilan social PDF p.70; CPC social PDF p.71",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement du montant social arrondi par la valeur exacte du CPC certifié.",
+                "capitaux_propres": (
+                    "La valeur antérieure mélangeait les capitaux propres sociaux avec les "
+                    "capitaux propres assimilés ; le total A social est retenu."
+                ),
+                "chiffre_affaires": "Remplacement du montant social arrondi par la valeur exacte du CPC.",
+                "immobilisations_corporelles": (
+                    "La valeur antérieure provenait d'un autre périmètre ou d'un tableau brut ; "
+                    "le bilan social publie un net de 440 539 319,56 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "Attijari wafa bank",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 7_649_292_000.00,
+            "capitaux_propres": 56_357_157_000.00,
+            "resultat_avant_impot": 11_538_939_000.00,
+            # Pour une banque, le produit net bancaire remplace le chiffre
+            # d'affaires afin de mesurer le revenu de l'activité principale.
+            "chiffre_affaires": 19_585_813_000.00,
+            "immobilisations_corporelles": 3_975_345_000.00,
+            "source": "RFA Attijariwafa bank 2025, comptes sociaux 2025 (KMAD)",
+            "pages": "états sociaux PDF p.119-121; indicateurs sociaux PDF p.133",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "La valeur antérieure de 22 226 671 000 MAD provenait d'un autre "
+                    "agrégat ; le CPC social certifié publie 7 649 292 000 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "Auto hall",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 104_436_346.20,
+            "capitaux_propres": 1_659_905_010.86,
+            "resultat_avant_impot": 169_071_434.20,
+            "chiffre_affaires": 4_445_234_884.58,
+            "immobilisations_corporelles": 330_088_942.11,
+            "source": "RFA Auto Hall 2025, comptes sociaux 2025",
+            "pages": "bilan social PDF p.46; CPC social PDF p.47",
+            "corrections_autorisees": {
+                "capitaux_propres": (
+                    "La valeur antérieure correspondait au seul capital social ; "
+                    "le total A du passif social est retenu."
+                ),
+                "resultat_avant_impot": (
+                    "La valeur antérieure était le total des capitaux propres mal classé ; "
+                    "le RCAI du CPC social est 169 071 434,20 MAD."
+                ),
+                "immobilisations_corporelles": (
+                    "La valeur antérieure était le brut d'ouverture du tableau des mouvements ; "
+                    "le bilan social publie un net 2025 de 330 088 942,11 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "BMCE BANK",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 2_170_762_000.00,
+            "capitaux_propres": 36_436_887_000.00,
+            "resultat_avant_impot": 3_281_456_000.00,
+            # Le produit net bancaire est l'équivalent sectoriel du chiffre
+            # d'affaires pour les établissements bancaires.
+            "chiffre_affaires": 9_433_341_000.00,
+            "immobilisations_corporelles": 3_176_656_000.00,
+            "source": "RFA Bank of Africa 2025, comptes sociaux 2025 (KMAD)",
+            "pages": "états sociaux PDF p.137 et p.143-145; indicateurs PDF p.155",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "La valeur antérieure de 1 886 195 000 MAD ne correspondait pas "
+                    "au bénéfice net social certifié de 2 170 762 000 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "CIH",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 918_696_000.00,
+            "capitaux_propres": 8_833_740_000.00,
+            "resultat_avant_impot": 1_523_279_000.00,
+            "chiffre_affaires": 4_212_363_000.00,
+            "immobilisations_corporelles": 1_437_094_000.00,
+            "source": "RFA CIH Bank 2025, comptes sociaux 2025 (KMAD)",
+            "pages": "bilan social PDF p.39; CPC social PDF p.40-41; indicateurs PDF p.55",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": (
+                    "La valeur antérieure de 184 574 000 MAD était la dotation annuelle "
+                    "aux amortissements ; le bilan social publie un stock net de "
+                    "1 437 094 000 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "CTM",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 70_171_925.75,
+            "capitaux_propres": 410_532_466.14,
+            "resultat_avant_impot": 91_725_417.75,
+            "chiffre_affaires": 556_039_243.41,
+            "immobilisations_corporelles": 347_337_636.96,
+            "source": "RFA CTM 2025, comptes sociaux 2025",
+            "pages": "bilan social PDF p.52; CPC social PDF p.53",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement du montant arrondi par la valeur exacte du CPC social.",
+                "resultat_avant_impot": "Remplacement du montant arrondi par la valeur exacte du CPC social.",
+                "chiffre_affaires": "Remplacement du montant arrondi par la valeur exacte du CPC social.",
+            },
+        },
+        {
+            "societe": "Cartier Saada",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 5_736_516.56,
+            "capitaux_propres": 152_299_965.73,
+            "resultat_avant_impot": 6_491_136.56,
+            "chiffre_affaires": 296_694_031.26,
+            "immobilisations_corporelles": 134_808_781.14,
+            "source": "RFA Cartier Saada 2024/2025, comptes sociaux clos au 31/03/2025",
+            "pages": "bilan social PDF p.31-32; CPC social PDF p.33-34",
+            "corrections_autorisees": {},
+        },
+        {
+            "societe": "IMMORENTE INVEST",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": -2_400_346.84,
+            "capitaux_propres": 637_527_007.41,
+            "resultat_avant_impot": -2_274_943.84,
+            "chiffre_affaires": 37_335_674.63,
+            "immobilisations_corporelles": 230_148_893.42,
+            "source": "RFA Immorente Invest 2025, comptes sociaux 2025",
+            "pages": "bilan social PDF p.49-50; CPC social PDF p.51-52",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": (
+                    "La valeur antérieure de 309 451 366,87 MAD était brute ; "
+                    "le bilan social publie une valeur nette de 230 148 893,42 MAD."
+                ),
+            },
+        },
+        {
+            "societe": "MUTANDIS SCA",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            # Le résultat net total est retenu pour respecter le même périmètre
+            # que l'impôt et le résultat avant impôt consolidés.
+            "resultat_net": 126_774_000.00,
+            "capitaux_propres": 1_553_781_000.00,
+            "resultat_avant_impot": 180_023_000.00,
+            "chiffre_affaires": 2_021_823_000.00,
+            "immobilisations_corporelles": 936_532_000.00,
+            "source": "RFA Mutandis SCA 2025, comptes consolidés 2025 (KMAD)",
+            "pages": "état consolidé PDF p.54; immobilisations nettes PDF p.61",
+            "corrections_autorisees": {
+                "capitaux_propres": (
+                    "La valeur antérieure correspondait aux comptes sociaux 2024 ; "
+                    "le total consolidé 2025 est retenu."
+                ),
+                "resultat_avant_impot": (
+                    "La valeur antérieure ne correspondait pas au compte de résultat "
+                    "consolidé ; le RCAI 2025 publié est 180 023 KMAD."
+                ),
+                "chiffre_affaires": (
+                    "La valeur antérieure était le chiffre d'affaires consolidé 2024 ; "
+                    "le montant 2025 est 2 021 823 KMAD."
+                ),
+            },
+        },
+        {
+            "societe": "Microdata",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 69_547_790.96,
+            "capitaux_propres": 195_438_452.04,
+            "resultat_avant_impot": 91_471_712.96,
+            "chiffre_affaires": 979_416_352.36,
+            "immobilisations_corporelles": 13_484_127.16,
+            "source": "RFA Microdata 2025, comptes sociaux 2025 (MAD)",
+            "pages": (
+                "indicateurs d'activité PDF p.15; tableau de variation "
+                "des capitaux propres PDF p.50"
+            ),
+        },
+        {
+            "societe": "Balima",
+            "annee": 2025,
+            # L'IS, le RCAI, le résultat net et le chiffre d'affaires de la
+            # ligne initiale proviennent des états sociaux, pas du consolidé.
+            "type_comptes_source": "consolides",
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 10_855_773.60,
+            "capitaux_propres": 138_245_139.83,
+            "resultat_avant_impot": 15_123_586.60,
+            "chiffre_affaires": 50_984_600.14,
+            "immobilisations_corporelles": 79_599_866.63,
+            "source": "RFA Balima 2025, comptes sociaux 2025 (MAD)",
+            "pages": "bilan actif/passif PDF p.10-11; état C3 PDF p.39",
+        },
+        {
+            "societe": "Zellidja",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            # Le résultat net total est retenu, car l'IS et le RCAI sont ceux
+            # de l'ensemble consolidé et non la seule part du groupe.
+            "resultat_net": 27_819_000.00,
+            "capitaux_propres": 141_874_000.00,
+            "resultat_avant_impot": 33_990_000.00,
+            "chiffre_affaires": 756_514_000.00,
+            "immobilisations_corporelles": 59_570_000.00,
+            "source": "RFA Zellidja 2025, comptes consolidés 2025 (KMAD)",
+            "pages": "compte de résultat PDF p.8; bilan consolidé PDF p.9",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "La valeur antérieure de 23 775 KMAD était le résultat net "
+                    "social ; le résultat net consolidé total est 27 819 KMAD."
+                ),
+                "immobilisations_corporelles": (
+                    "La valeur antérieure de 32 563 KMAD était le brut social ; "
+                    "les immobilisations corporelles consolidées nettes sont "
+                    "59 570 KMAD."
+                ),
+            },
+        },
+        {
+            "societe": "Crédit du Maroc",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 863_551_000.00,
+            "capitaux_propres": 8_203_010_000.00,
+            "resultat_avant_impot": 1_543_821_000.00,
+            # Pour une banque, le produit net bancaire remplace le chiffre
+            # d'affaires comme mesure homogène de l'activité.
+            "chiffre_affaires": 3_568_401_000.00,
+            "immobilisations_corporelles": 1_481_592_000.00,
+            "source": (
+                "RFA Crédit du Maroc 2025, états financiers consolidés IFRS "
+                "2025 (KMAD)"
+            ),
+            "pages": "bilan et compte de résultat consolidés PDF p.13",
+            "corrections_autorisees": {
+                "resultat_net": (
+                    "La valeur antérieure de 886 859 KMAD correspondait au "
+                    "segment Banque Maroc et internationale ; le résultat net "
+                    "consolidé total est 863 551 KMAD."
+                ),
+                "capitaux_propres": (
+                    "La valeur antérieure de 2 410 234 KMAD correspondait aux "
+                    "actifs financiers à la juste valeur par capitaux propres ; "
+                    "les capitaux propres consolidés totalisent 8 203 010 KMAD."
+                ),
+                "resultat_avant_impot": (
+                    "Le RCAI consolidé publié est 1 543 821 KMAD et vérifie "
+                    "exactement l'identité avec l'IS de la base."
+                ),
+                "immobilisations_corporelles": (
+                    "La valeur antérieure de 1 606 804 KMAD était celle du "
+                    "segment Banque ; le total consolidé net est 1 481 592 KMAD."
+                ),
+            },
+        },
+        {
+            "societe": "AFRIC INDUSTRIES SA",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            # Les trois agrégats de résultat sont conservés dans leur version
+            # arrondie en KMAD, identique à celle utilisée pour l'IS initial.
+            "resultat_net": 7_530_000.00,
+            "capitaux_propres": 49_153_558.80,
+            "resultat_avant_impot": 9_908_000.00,
+            "chiffre_affaires": 43_952_000.00,
+            "immobilisations_corporelles": 1_652_884.71,
+            "source": "RFA Afric Industries 2025, comptes sociaux 2025 (MAD)",
+            "pages": "bilan actif/passif PDF p.17-18; synthèse PDF p.7",
+        },
+        {
+            "societe": "CASH PLUS S.A",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 251_455_420.00,
+            "capitaux_propres": 882_413_000.00,
+            "resultat_avant_impot": 463_558_430.00,
+            # Cash Plus étant un établissement de paiement, le PNB est utilisé
+            # comme mesure de l'activité à la place du chiffre d'affaires.
+            "chiffre_affaires": 693_098_450.00,
+            "immobilisations_corporelles": 66_830_000.00,
+            "source": "RFA Cash Plus 2025, comptes sociaux 2025",
+            "pages": (
+                "bilan et CPC sociaux PDF p.80-81; variation des capitaux "
+                "propres PDF p.89"
+            ),
+        },
+        {
+            "societe": "CMGP GROUP",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 123_837_936.73,
+            "capitaux_propres": 2_246_001_775.41,
+            "resultat_avant_impot": 124_211_405.73,
+            "chiffre_affaires": 26_787_027.66,
+            # Le bilan social de la holding publie explicitement une valeur
+            # nulle : ce zéro est observé et ne constitue pas une imputation.
+            "immobilisations_corporelles": 0.00,
+            "source": "RFA CMGP Group 2025, comptes sociaux 2025 (MAD)",
+            "pages": "bilan social PDF p.54; CPC social PDF p.55",
+        },
+        {
+            "societe": "DISWAY",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 67_189_047.79,
+            "capitaux_propres": 611_984_281.44,
+            "resultat_avant_impot": 87_348_236.79,
+            "chiffre_affaires": 1_585_037_428.91,
+            "immobilisations_corporelles": 178_055_203.50,
+            "source": "Publication annuelle Disway 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.2",
+        },
+        {
+            "societe": "Vicenne",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 98_020_120.95,
+            "capitaux_propres": 1_006_785_952.87,
+            "resultat_avant_impot": 98_385_952.95,
+            "chiffre_affaires": 33_328_615.70,
+            "immobilisations_corporelles": 3_622_043.69,
+            "source": "RFA Vicenne 2025, comptes sociaux 2025 (MAD)",
+            "pages": "bilan social PDF p.40; rapport de gestion PDF p.39",
+        },
+        {
+            "societe": "AFMA",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 64_430_000.00,
+            "capitaux_propres": 83_419_000.00,
+            "resultat_avant_impot": 83_022_000.00,
+            "chiffre_affaires": 263_897_000.00,
+            "immobilisations_corporelles": 20_615_000.00,
+            "source": "Publication annuelle AFMA 2025, comptes sociaux (KMAD)",
+            "pages": "bilan et CPC sociaux PDF p.2",
+        },
+        {
+            "societe": "AKDITAL",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 365_024_673.00,
+            "capitaux_propres": 2_522_144_818.00,
+            "resultat_avant_impot": 370_702_249.00,
+            "chiffre_affaires": 160_082_903.00,
+            "immobilisations_corporelles": 17_224_605.00,
+            "source": "Publication annuelle Akdital 2025, comptes sociaux (MAD)",
+            "pages": "CPC et bilan sociaux PDF p.3",
+        },
+        {
+            "societe": "ARADEI Capital",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 75_589_798.57,
+            "capitaux_propres": 2_480_534_475.83,
+            "resultat_avant_impot": 89_076_420.20,
+            "chiffre_affaires": 215_512_273.89,
+            "immobilisations_corporelles": 667_237_959.98,
+            "source": "Publication annuelle Aradei Capital 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.4",
+        },
+        {
+            "societe": "JALU (JET CONTRACTORS)",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 139_962_333.47,
+            "capitaux_propres": 1_109_866_931.01,
+            "resultat_avant_impot": 238_956_471.42,
+            "chiffre_affaires": 3_553_982_968.14,
+            "immobilisations_corporelles": 486_487_500.31,
+            "source": "Publication annuelle JET Contractors 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.1",
+        },
+        {
+            "societe": "TAQA MOROCCO",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 951_449_157.07,
+            "capitaux_propres": 6_556_836_218.50,
+            "resultat_avant_impot": 1_183_967_232.07,
+            "chiffre_affaires": 6_100_365_562.36,
+            "immobilisations_corporelles": 313_706_534.89,
+            "source": "RFA TAQA Morocco 2025, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.9; état C3 PDF p.15",
+        },
+        {
+            "societe": "Afriquia Gaz",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 633_058_101.71,
+            "capitaux_propres": 3_304_626_946.70,
+            "resultat_avant_impot": 969_713_613.71,
+            "chiffre_affaires": 8_739_230_630.13,
+            "immobilisations_corporelles": 2_625_394_462.34,
+            "source": "RFA Afriquia Gaz 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.33-35",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure était mal dimensionnée; remplacement par le résultat net du CPC social.",
+                "chiffre_affaires": "La valeur antérieure était mal dimensionnée; remplacement par le chiffre d'affaires du CPC social.",
+            },
+        },
+        {
+            "societe": "SRM",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 12_066_216.42,
+            "capitaux_propres": 177_784_941.01,
+            "resultat_avant_impot": 15_732_947.42,
+            "chiffre_affaires": 393_652_383.84,
+            "immobilisations_corporelles": 594_068.79,
+            "source": "RFA SRM 2025, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.102; tableaux B2/B2 bis PDF p.112-113",
+        },
+        {
+            "societe": "ALLIANCES",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 401_758_000.00,
+            "capitaux_propres": 4_084_918_000.00,
+            "resultat_avant_impot": 519_199_000.00,
+            "chiffre_affaires": 2_431_512_000.00,
+            "immobilisations_corporelles": 709_504_000.00,
+            "source": "RFA Alliances 2025, comptes consolidés (KMAD convertis en MAD)",
+            "pages": "bilan et CPC consolidés PDF p.21-22; note 5.2.1.3 PDF p.26",
+            "corrections_autorisees": {
+                "capitaux_propres": "La valeur antérieure était restée en KMAD; remplacement par le total consolidé incluant les minoritaires, converti en MAD.",
+                "chiffre_affaires": "La valeur antérieure provenait d'une ancienne année et était restée en KMAD; remplacement par le CA consolidé 2025 en MAD.",
+            },
+        },
+        {
+            "societe": "Aluminium du Maroc",
+            "annee": 2025,
+            "type_comptes_source": "consolides",
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 61_978_359.15,
+            "capitaux_propres": 443_720_515.50,
+            "resultat_avant_impot": 87_230_270.15,
+            "chiffre_affaires": 1_267_749_565.69,
+            "immobilisations_corporelles": 190_273_002.98,
+            "source": "RFA Aluminium du Maroc 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.25-27; ESG PDF p.29",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure provenait des comptes consolidés et était restée en KMAD; remplacement par le résultat net social correspondant à l'IS.",
+                "capitaux_propres": "La valeur antérieure était le seul capital social; remplacement par le total des capitaux propres sociaux.",
+            },
+        },
+        {
+            "societe": "Auto Nejma",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 300_005_997.98,
+            "capitaux_propres": 1_434_094_312.44,
+            "resultat_avant_impot": 486_418_195.98,
+            "chiffre_affaires": 4_133_588_091.66,
+            "immobilisations_corporelles": 514_809_876.92,
+            "source": "RFA Auto Nejma 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.80-82",
+            "corrections_autorisees": {
+                "capitaux_propres": "Remplacement de la valeur arrondie par le total exact publié au bilan social.",
+                "resultat_avant_impot": "Remplacement de la valeur arrondie par le montant exact du CPC social.",
+            },
+        },
+        {
+            "societe": "DISTY RFA",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 25_878_107.91,
+            "capitaux_propres": 185_034_938.69,
+            "resultat_avant_impot": 29_615_892.91,
+            "chiffre_affaires": 637_384_403.73,
+            "immobilisations_corporelles": 1_980_917.01,
+            "source": "RFA Disty Technologies 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.24-25",
+        },
+        {
+            "societe": "HPS",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 105_777_740.00,
+            "capitaux_propres": 816_636_777.00,
+            "resultat_avant_impot": 160_623_057.00,
+            "chiffre_affaires": 1_476_348_064.00,
+            "immobilisations_corporelles": 60_946_599.00,
+            "source": "RFA HPS 2025, comptes consolidés (MAD)",
+            "pages": "bilan et CPC consolidés PDF p.58-59",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur antérieure par le résultat net de l'ensemble consolidé 2025.",
+                "chiffre_affaires": "Remplacement de la valeur antérieure mal dimensionnée par le chiffre d'affaires consolidé 2025.",
+            },
+        },
+        {
+            "societe": "M2M",
+            "annee": 2025,
+            "type_comptes_source": "consolides",
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 3_742_524.28,
+            "capitaux_propres": 248_286_630.89,
+            "resultat_avant_impot": 6_149_738.28,
+            "chiffre_affaires": 43_410_959.16,
+            "immobilisations_corporelles": 191_253.64,
+            "source": "RFA M2M Group 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.20-23",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur antérieure par le résultat net social correspondant exactement à l'IS.",
+                "chiffre_affaires": "Remplacement de la valeur arrondie par le chiffre d'affaires social exact.",
+            },
+        },
+        {
+            "societe": "Maghrebail",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 148_199_000.00,
+            "capitaux_propres": 1_228_220_000.00,
+            "resultat_avant_impot": 261_841_000.00,
+            "chiffre_affaires": 438_374_000.00,
+            "immobilisations_corporelles": 70_000.00,
+            "source": "RFA Maghrebail 2025, comptes sociaux PCEC (KMAD convertis en MAD)",
+            "pages": "bilan PDF p.43; CPC PDF p.46; capitaux propres PDF p.57",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur antérieure par le résultat net social 2025 publié.",
+            },
+        },
+        {
+            "societe": "Maroc Leasing",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 107_295_000.00,
+            "capitaux_propres": 1_227_913_000.00,
+            "resultat_avant_impot": 192_281_000.00,
+            "chiffre_affaires": 387_199_000.00,
+            "immobilisations_corporelles": 16_382_000.00,
+            "source": "RFA Maroc Leasing 2025, comptes sociaux PCEC (KMAD convertis en MAD)",
+            "pages": "bilan PDF p.37; CPC PDF p.40; capitaux propres PDF p.55",
+        },
+        {
+            "societe": "MarocTelecom",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 5_805_375_000.00,
+            "capitaux_propres": 21_247_673_000.00,
+            "resultat_avant_impot": 8_205_880_000.00,
+            "chiffre_affaires": 18_131_524_000.00,
+            "immobilisations_corporelles": 16_479_908_000.00,
+            "source": "RFA Maroc Telecom 2025, comptes sociaux (KMAD convertis en MAD)",
+            "pages": "bilan et CPC sociaux PDF p.79-81",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": "Remplacement de la valeur brute par la valeur nette du bilan social.",
+            },
+        },
+        {
+            "societe": "Papelera de Tetuan",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 9_666_867.24,
+            "capitaux_propres": 41_145_968.11,
+            "resultat_avant_impot": 9_943_451.24,
+            "chiffre_affaires": 88_408_885.33,
+            "immobilisations_corporelles": 94_681_624.08,
+            "source": "RFA MED Paper 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.37-40",
+            "corrections_autorisees": {
+                "resultat_avant_impot": "Remplacement de la valeur antérieure par le RCAI exact du CPC social.",
+                "chiffre_affaires": "Remplacement de la valeur antérieure par le chiffre d'affaires exact du CPC social.",
+            },
+        },
+        {
+            "societe": "SODEP-Marsa Maroc",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 1_393_703_488.45,
+            "capitaux_propres": 2_793_112_625.99,
+            "resultat_avant_impot": 1_982_925_481.45,
+            "chiffre_affaires": 3_336_686_500.57,
+            "immobilisations_corporelles": 1_848_998_789.92,
+            "source": "RFA Marsa Maroc 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.135-138; tableau triennal PDF p.150",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": "Remplacement de la valeur brute par la valeur nette du bilan social.",
+            },
+        },
+        {
+            "societe": "Sofac-Crédit",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 185_009_000.00,
+            "capitaux_propres": 1_844_274_000.00,
+            "resultat_avant_impot": 287_977_000.00,
+            "chiffre_affaires": 1_004_105_000.00,
+            "immobilisations_corporelles": 70_607_000.00,
+            "source": "RFA Sofac 2025, comptes sociaux PCEC (KMAD convertis en MAD)",
+            "pages": "CPC PDF p.55; bilan PDF p.56; tableau triennal PDF p.62; opinion d'audit PDF p.65",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur antérieure par le bénéfice net social audité 2025.",
+                "immobilisations_corporelles": "Remplacement de la valeur brute par la valeur nette du bilan social.",
+            },
+        },
+        {
+            "societe": "TGCC S.A",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 717_627_459.91,
+            "capitaux_propres": 3_968_760_742.38,
+            "resultat_avant_impot": 1_169_326_837.91,
+            "chiffre_affaires": 7_473_647_851.20,
+            "immobilisations_corporelles": 259_734_395.17,
+            "source": "RFA TGCC 2025, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.78; tableau triennal PDF p.91",
+        },
+        {
+            "societe": "Colorado",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 65_479_341.98,
+            "capitaux_propres": 359_119_876.03,
+            "resultat_avant_impot": 85_853_290.98,
+            "chiffre_affaires": 624_013_253.82,
+            "immobilisations_corporelles": 113_649_288.59,
+            "source": "RFA Colorado 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.11-15; tableau triennal PDF p.34",
+        },
+        {
+            "societe": "Ciments du Maroc",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 1_242_674_880.15,
+            "capitaux_propres": 3_574_353_640.71,
+            "resultat_avant_impot": 1_793_733_465.15,
+            "chiffre_affaires": 4_140_705_374.65,
+            "immobilisations_corporelles": 1_593_788_183.33,
+            "source": "RFA Ciments du Maroc 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.46-48; tableau triennal PDF p.55",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure correspondait au résultat 2024; remplacement par le résultat social 2025.",
+            },
+        },
+        {
+            "societe": "Unimer",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": -9_469_612.92,
+            "capitaux_propres": 1_522_579_729.92,
+            "resultat_avant_impot": -7_641_469.92,
+            "chiffre_affaires": 688_370_924.69,
+            "immobilisations_corporelles": 133_583_067.89,
+            "source": "RFA Unimer 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.25-26",
+            "corrections_autorisees": {
+                "chiffre_affaires": "Remplacement de la valeur antérieure erronée par le chiffre d'affaires social 2025.",
+            },
+        },
+        {
+            "societe": "Addoha",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": -90_057_953.04,
+            "capitaux_propres": 10_363_635_188.45,
+            "resultat_avant_impot": -88_892_102.04,
+            "chiffre_affaires": 473_375_466.86,
+            "immobilisations_corporelles": 630_812_048.47,
+            "source": "RFA Addoha 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.25-28",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur parasite -2 par la perte nette sociale publiée.",
+            },
+        },
+        {
+            "societe": "Managem",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 531_853_684.20,
+            "capitaux_propres": 6_417_759_925.32,
+            "resultat_avant_impot": 536_175_609.20,
+            "chiffre_affaires": 531_120_142.59,
+            "immobilisations_corporelles": 66_542_736.49,
+            "source": "RFA Managem 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.71-73; tableau triennal PDF p.84",
+        },
+        {
+            "societe": "RES DAR SAADA",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 4_491_000.00,
+            "capitaux_propres": 3_739_578_000.00,
+            "resultat_avant_impot": 18_530_000.00,
+            "chiffre_affaires": 468_513_000.00,
+            "immobilisations_corporelles": 59_641_000.00,
+            "source": "RFA Résidences Dar Saada 2025, comptes consolidés (KMAD convertis en MAD)",
+            "pages": "compte de résultat et bilan consolidés PDF p.22-26",
+            "corrections_autorisees": {
+                "resultat_avant_impot": "Conversion de la valeur restée en KMAD vers les MAD.",
+            },
+        },
+        {
+            "societe": "Eqdom",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 95_498_000.00,
+            "capitaux_propres": 1_464_722_000.00,
+            "resultat_avant_impot": 151_139_000.00,
+            "chiffre_affaires": 589_865_000.00,
+            "immobilisations_corporelles": 39_179_000.00,
+            "source": "RFA Eqdom 2025, comptes sociaux PCEC (KMAD convertis en MAD)",
+            "pages": "bilan PDF p.37; CPC PDF p.38-39; tableau triennal PDF p.52",
+            "corrections_autorisees": {
+                "resultat_avant_impot": "Remplacement du montant arrondi par le résultat avant impôt social exact.",
+            },
+        },
+        {
+            "societe": "SALAFIN",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 96_117_000.00,
+            "capitaux_propres": 888_506_000.00,
+            "resultat_avant_impot": 191_443_000.00,
+            "chiffre_affaires": 384_035_000.00,
+            "immobilisations_corporelles": 70_864_000.00,
+            "source": "RFA Salafin 2025, comptes sociaux PCEC (KMAD convertis en MAD)",
+            "pages": "bilan PDF p.67; CPC PDF p.69-70; tableau triennal PDF p.90",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure correspondait à 2024; remplacement par le résultat social 2025.",
+            },
+        },
+        {
+            "societe": "CFG",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 314_226_000.00,
+            "capitaux_propres": 1_865_000_000.00,
+            "resultat_avant_impot": 369_748_000.00,
+            "chiffre_affaires": 927_743_000.00,
+            "immobilisations_corporelles": 728_978_000.00,
+            "source": "RFA CFG Bank 2025, comptes sociaux PCEC (KMAD convertis en MAD)",
+            "pages": "synthèse sociale PDF p.31; bilan PDF p.50; CPC PDF p.51",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur provisoire par le résultat social 2025, cohérent avec l'IS publié.",
+            },
+        },
+        {
+            "societe": "Wafa Assurance",
+            "annee": 2025,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 1_100_403_000.00,
+            "capitaux_propres": 15_231_064_000.00,
+            "resultat_avant_impot": 1_321_140_000.00,
+            "chiffre_affaires": 9_064_653_000.00,
+            "immobilisations_corporelles": 105_556_000.00,
+            "source": "RFA Wafa Assurance 2025, comptes consolidés IFRS (KMAD convertis en MAD)",
+            "pages": "bilan consolidé PDF p.16; résultat consolidé PDF p.17; information sectorielle PDF p.33",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure était le revenu d'assurance; remplacement par le résultat net de l'ensemble consolidé.",
+                "capitaux_propres": "Remplacement de la valeur sectorielle parasite par les capitaux propres totaux consolidés.",
+            },
+        },
+        {
+            "societe": "Atlanta",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 466_227_926.11,
+            "capitaux_propres": 4_146_129_091.19,
+            "resultat_avant_impot": 506_789_178.11,
+            "chiffre_affaires": 5_964_000_000.00,
+            "immobilisations_corporelles": 116_431_021.87,
+            "source": "RFA AtlantaSanad 2025, comptes sociaux (MAD; primes acquises issues du rapport de gestion)",
+            "pages": "indicateurs PDF p.53-54; bilan PDF p.120-121; CPC PDF p.124",
+            "corrections_autorisees": {
+                "chiffre_affaires": "Remplacement de la valeur parasite par les primes acquises 2025, indicateur d'activité retenu pour l'assurance.",
+            },
+        },
+        {
+            "societe": "CNIA SAADA",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 451_629_897.95,
+            "capitaux_propres": 5_449_481_507.24,
+            "resultat_avant_impot": 604_726_458.25,
+            "chiffre_affaires": 6_194_640_478.06,
+            "immobilisations_corporelles": 76_779_690.70,
+            "source": "RFA Sanlam Maroc 2025, comptes sociaux (MAD; ancien libellé CNIA SAADA dans la base)",
+            "pages": "bilan et CPC sociaux PDF p.4-5; opinion d'audit PDF p.7",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de la valeur 2024 mal dimensionnée par le résultat net social exact 2025.",
+            },
+        },
+        {
+            "societe": "SGTM S.A",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 1_175_317_264.72,
+            "capitaux_propres": 3_424_090_796.03,
+            "resultat_avant_impot": 1_830_926_577.75,
+            "chiffre_affaires": 14_629_584_050.54,
+            "immobilisations_corporelles": 214_680_299.19,
+            "source": "RFA SGTM 2025 officiel AMMC, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.62; CPC social PDF p.63; tableau triennal PDF p.83",
+        },
+        {
+            "societe": "DELTA HOLDING S.A",
+            "annee": 2008,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": pd.NA,
+            "capitaux_propres": 512_022_480.11,
+            "resultat_avant_impot": pd.NA,
+            "chiffre_affaires": pd.NA,
+            "immobilisations_corporelles": pd.NA,
+            "source": "États financiers Delta Holding 2008, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.1",
+            "corrections_autorisees": {
+                "capitaux_propres": "Correction d'une confusion d'unité et de rubrique; remplacement par le total des capitaux propres sociaux.",
+            },
+        },
+        {
+            "societe": "Unimer",
+            "annee": 2021,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": pd.NA,
+            "capitaux_propres": pd.NA,
+            "resultat_avant_impot": pd.NA,
+            "chiffre_affaires": pd.NA,
+            "immobilisations_corporelles": 187_324_332.58,
+            "source": "RFA Unimer 2021, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.24",
+            "corrections_autorisees": {
+                "immobilisations_corporelles": "Correction d'une valeur mal dimensionnée; remplacement par la valeur nette du bilan social.",
+            },
+        },
+        {
+            "societe": "Zellidja",
+            "annee": 2021,
+            "type_comptes_source": "consolides",
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 268_143.45,
+            "capitaux_propres": 47_752_300.73,
+            "resultat_avant_impot": 278_394.45,
+            "chiffre_affaires": 24_022.00,
+            "immobilisations_corporelles": 439_223.14,
+            "source": "RFA Zellidja 2021, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.37-38; CPC social PDF p.39-40",
+            "corrections_autorisees": {
+                "resultat_net": "L'IS de la base est l'impôt social exact; remplacement du résultat consolidé par le résultat social.",
+                "capitaux_propres": "Remplacement des capitaux propres consolidés par les capitaux propres sociaux cohérents avec l'IS.",
+                "chiffre_affaires": "Remplacement du chiffre d'affaires consolidé par les produits de participation sociaux publiés.",
+                "immobilisations_corporelles": "Remplacement des immobilisations consolidées par la valeur nette sociale.",
+            },
+        },
+        {
+            "societe": "Zellidja",
+            "annee": 2022,
+            "type_comptes_source": "consolides",
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 11_100_004.05,
+            "capitaux_propres": 58_852_304.78,
+            "resultat_avant_impot": 11_110_100.05,
+            "chiffre_affaires": 59_912.00,
+            "immobilisations_corporelles": 439_223.14,
+            "source": "RFA Zellidja 2022, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.40-41; CPC social PDF p.42-43",
+            "corrections_autorisees": {
+                "resultat_net": "Correction de l'unité et du périmètre avec le résultat social exact correspondant à l'IS.",
+                "capitaux_propres": "Remplacement des capitaux propres consolidés par les capitaux propres sociaux cohérents avec l'IS.",
+                "chiffre_affaires": "Remplacement d'un indicateur d'une filiale par les produits de participation sociaux publiés.",
+                "immobilisations_corporelles": "Remplacement des immobilisations consolidées par la valeur nette sociale.",
+            },
+        },
+        {
+            "societe": "Zellidja",
+            "annee": 2023,
+            "type_comptes_resolu": "consolides",
+            "resultat_net": 1_722_000.00,
+            "capitaux_propres": 100_680_000.00,
+            "resultat_avant_impot": 3_513_000.00,
+            "chiffre_affaires": 603_030_000.00,
+            "immobilisations_corporelles": 61_452_000.00,
+            "source": "RFA Zellidja 2023, comptes consolidés (KMAD convertis en MAD)",
+            "pages": "compte de résultat consolidé PDF p.8; bilan consolidé PDF p.9-10",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement d'une valeur parasite par le résultat net de l'ensemble consolidé cohérent avec l'IS.",
+                "capitaux_propres": "Remplacement de la part du groupe par les capitaux propres de l'ensemble consolidé.",
+                "chiffre_affaires": "Correction d'une extraction partielle; remplacement par le chiffre d'affaires consolidé publié.",
+            },
+        },
+        {
+            "societe": "Cosumar",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 694_683_454.26,
+            "capitaux_propres": 4_434_619_383.71,
+            "resultat_avant_impot": 1_069_853_883.26,
+            "chiffre_affaires": 9_776_161_240.38,
+            "immobilisations_corporelles": 1_668_942_984.36,
+            "source": "RFA Cosumar 2025, comptes sociaux (MAD)",
+            "pages": "bilan social PDF p.137; tableau triennal PDF p.148; opinion d'audit PDF p.154",
+            "corrections_autorisees": {
+                "resultat_net": "Remplacement de l'indicateur résumé arrondi par le résultat net exact des comptes sociaux audités.",
+                "capitaux_propres": "Remplacement de la situation nette élargie par le total des capitaux propres (A) du bilan social.",
+            },
+        },
+        {
+            "societe": "DELTA HOLDING S.A",
+            "annee": 2025,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 340_894_450.46,
+            "capitaux_propres": 1_924_797_978.22,
+            "resultat_avant_impot": 357_498_465.46,
+            "chiffre_affaires": 84_115_527.42,
+            "immobilisations_corporelles": 15_332_853.38,
+            "source": "RFA Delta Holding 2025, comptes sociaux (MAD)",
+            "pages": "bilan et CPC sociaux PDF p.25-27; tableau triennal PDF p.40; opinion d'audit PDF p.42",
+            "corrections_autorisees": {
+                "resultat_net": "La valeur antérieure était le résultat net 2024; remplacement par le résultat social 2025.",
+                "capitaux_propres": "La valeur antérieure provenait d'une ancienne situation nette; remplacement par le total des capitaux propres 2025.",
+            },
+        },
+        {
+            "societe": "Cosumar",
+            "annee": 2023,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 1_136_886_823.21,
+            "capitaux_propres": 4_692_124_211.34,
+            "resultat_avant_impot": 1_645_160_497.21,
+            "chiffre_affaires": 9_462_216_869.73,
+            "immobilisations_corporelles": 1_707_978_657.49,
+            "source": "RFA Cosumar 2024, comptes sociaux comparatifs 2023",
+            "pages": "p.222-225 du rapport (PDF p.112-113)",
+            "corrections_autorisees": {
+                "capitaux_propres": "Remplacement par le total des capitaux propres du bilan social.",
+                "chiffre_affaires": "La valeur 202 M provenait d'un indicateur ESG, pas du CPC social.",
+            },
+        },
+        {
+            "societe": "Cosumar",
+            "annee": 2024,
+            "type_comptes_resolu": "sociaux",
+            "resultat_net": 937_554_578.11,
+            "capitaux_propres": 4_684_807_359.45,
+            "resultat_avant_impot": 1_425_429_517.11,
+            "chiffre_affaires": 9_643_112_303.24,
+            "immobilisations_corporelles": 1_666_110_264.86,
+            "source": "RFA Cosumar 2025, comptes sociaux comparatifs 2024",
+            "pages": "p.272-275 du rapport (PDF p.137-138)",
+            "corrections_autorisees": {
+                "capitaux_propres": "Remplacement par le total des capitaux propres du bilan social.",
+                "chiffre_affaires": "La valeur 51 M provenait d'un indicateur ESG, pas du CPC social.",
+            },
+        },
+    ]
+    values = pd.DataFrame(verified)
+    panel = pd.read_csv(source_csv)
+    financial_columns = [
+        "capitaux_propres", "chiffre_affaires", "dettes_financieres",
+        "ebit", "ebitda", "immobilisations_corporelles", "impot_differe",
+        "resultat_avant_impot", "resultat_financier", "resultat_net",
+        "total_actif", "total_dettes", "tresorerie_equivalents",
+    ]
+    value_columns = [
+        "resultat_net", "capitaux_propres", "resultat_avant_impot",
+        "chiffre_affaires", "immobilisations_corporelles",
+    ]
+    trace_rows: list[dict] = []
+
+    for _, extracted in values.iterrows():
+        source_type = extracted.get("type_comptes_source", extracted["type_comptes_resolu"])
+        if pd.isna(source_type):
+            source_type = extracted["type_comptes_resolu"]
+        mask = (
+            panel["societe"].eq(extracted["societe"])
+            & panel["annee"].eq(int(extracted["annee"]))
+            & panel["type_comptes_resolu"].eq(source_type)
+        )
+        if int(mask.sum()) != 1:
+            raise ValueError(
+                "Observation introuvable ou non unique : "
+                f"{extracted['societe']} {extracted['annee']} "
+                f"{source_type}"
+            )
+        index = panel.index[mask][0]
+        # Le périmètre n'est modifié que lorsqu'un IS publié permet de prouver
+        # formellement que l'étiquette source était erronée.
+        if source_type != extracted["type_comptes_resolu"]:
+            panel.at[index, "type_comptes_resolu"] = extracted["type_comptes_resolu"]
+            trace_rows.append(
+                {
+                    "societe": extracted["societe"],
+                    "annee": int(extracted["annee"]),
+                    "type_comptes": extracted["type_comptes_resolu"],
+                    "variable": "type_comptes_resolu",
+                    "ancienne_valeur": source_type,
+                    "valeur_extraite": extracted["type_comptes_resolu"],
+                    "decision": "corrigée_sur_preuve",
+                    "source": extracted["source"],
+                    "pages": extracted["pages"],
+                    "justification_correction": (
+                        "L'IS de la base est exactement celui du CPC social publié."
+                    ),
+                }
+            )
+        corrections = extracted.get("corrections_autorisees", {})
+        if not isinstance(corrections, dict):
+            corrections = {}
+        for variable in value_columns:
+            previous = panel.at[index, variable]
+            if pd.isna(extracted[variable]):
+                continue
+            new_value = float(extracted[variable])
+            if pd.isna(previous):
+                panel.at[index, variable] = new_value
+                decision = "complétée"
+            elif abs(float(previous) - new_value) <= max(1.0, abs(new_value) * 1e-6):
+                decision = "déjà identique"
+            elif variable in corrections:
+                panel.at[index, variable] = new_value
+                decision = "corrigée_sur_preuve"
+            else:
+                # Une valeur existante contradictoire n'est jamais écrasée sans audit.
+                decision = "conflit_non_remplacé"
+            trace_rows.append(
+                {
+                    "societe": extracted["societe"],
+                    "annee": int(extracted["annee"]),
+                    "type_comptes": extracted["type_comptes_resolu"],
+                    "variable": variable,
+                    "ancienne_valeur": previous,
+                    "valeur_extraite": new_value,
+                    "decision": decision,
+                    "source": extracted["source"],
+                    "pages": extracted["pages"],
+                    "justification_correction": corrections.get(variable, ""),
+                }
+            )
+        panel.at[index, "nombre_variables_prevalidees"] = int(
+            panel.loc[index, financial_columns].notna().sum()
+        )
+
+    keys = ["societe", "annee", "type_comptes_resolu"]
+    if panel.duplicated(keys).any():
+        raise ValueError("La complétion a introduit un doublon dans le panel.")
+    trace = pd.DataFrame(trace_rows)
+    conflicts = trace[trace["decision"].eq("conflit_non_remplacé")]
+    if not conflicts.empty:
+        raise ValueError(
+            "Des valeurs existantes contredisent le lot vérifié ; consulter la trace."
+        )
+
+    panel.to_csv(target_csv, index=False, encoding="utf-8-sig")
+    workbook = {
+        sheet: pd.read_excel(source_xlsx, sheet_name=sheet)
+        for sheet in pd.ExcelFile(source_xlsx).sheet_names
+    }
+    workbook["Panel historique"] = panel
+    with pd.ExcelWriter(target_xlsx, engine="openpyxl") as writer:
+        for sheet, frame in workbook.items():
+            frame.to_excel(writer, sheet_name=sheet[:31], index=False)
+        trace.to_excel(writer, sheet_name="Compléments v27", index=False)
+    with pd.ExcelWriter(trace_file, engine="openpyxl") as writer:
+        trace.to_excel(writer, sheet_name="Valeurs contrôlées", index=False)
+        values.to_excel(writer, sheet_name="Sources", index=False)
+        # Le dernier contrôle distingue une absence documentaire d'une valeur
+        # volontairement laissée vide parce que le périmètre de l'IS est ambigu.
+        audit_2025 = panel.loc[panel["annee"].eq(2025), [
+            "societe", "type_comptes_resolu", "is_mad", *value_columns,
+        ]].copy()
+        audit_2025["nombre_variables_manquantes"] = audit_2025[
+            value_columns
+        ].isna().sum(axis=1)
+        audit_2025["statut_completion_2025"] = audit_2025[
+            "nombre_variables_manquantes"
+        ].map(lambda count: "complet" if count == 0 else "à arbitrer")
+        audit_2025.to_excel(writer, sheet_name="Audit 2025", index=False)
+        unresolved = audit_2025.loc[
+            audit_2025["nombre_variables_manquantes"].gt(0)
+        ].copy()
+        unresolved["motif"] = unresolved["societe"].map({
+            "BMCI": (
+                "L'IS de la base (340 045 000 MAD) ne correspond ni à l'impôt "
+                "social publié (339 529 000 MAD), ni à l'impôt consolidé publié "
+                "(318 575 000 MAD). Le chiffre d'affaires/PNB n'est donc pas "
+                "affecté sans validation du périmètre de la variable cible."
+            ),
+        }).fillna("Source ou périmètre non résolu après contrôle.")
+        unresolved.to_excel(writer, sheet_name="Cas non résolus", index=False)
+
+    print(trace["decision"].value_counts().to_string())
+    print(f"Panel v27 : {target_csv}")
+    print(f"Classeur v27 : {target_xlsx}")
+    print(f"Traçabilité : {trace_file}")
+
+
 def main() -> None:
     """Afficher le catalogue interne ou lancer une intégration récente."""
     parser = argparse.ArgumentParser(
@@ -92,8 +1653,16 @@ def main() -> None:
     parser.add_argument(
         "--list", action="store_true", help="Afficher les scripts disponibles."
     )
+    parser.add_argument(
+        "--complete-priority-2024",
+        action="store_true",
+        help="Créer la v27 avec le premier lot 2024 contrôlé.",
+    )
     args = parser.parse_args()
 
+    if args.complete_priority_2024:
+        complete_priority_2024()
+        return
     if args.list or not args.script:
         list_scripts()
         return

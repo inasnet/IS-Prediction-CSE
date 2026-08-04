@@ -1,0 +1,23 @@
+{
+  "fichier_source": "C:\\Users\\HP\\Desktop\\var fin eco\\data\\output\\echantillon_t_plus_1_structurel_v27.csv",
+  "cible": "is_cible_t_plus_1",
+  "colonne_societe": "societe",
+  "colonne_annee_t": "annee",
+  "colonne_annee_cible": "annee_cible",
+  "variables_numeriques_analysees": [
+    "is_mad",
+    "chiffre_affaires",
+    "capitaux_propres",
+    "immobilisations_corporelles",
+    "variation_is_cible",
+    "is_cible_t_plus_1"
+  ],
+  "variables_explicatives_numeriques": [
+    "is_mad",
+    "chiffre_affaires",
+    "capitaux_propres",
+    "immobilisations_corporelles",
+    "variation_is_cible"
+  ],
+  "dossier_resultats": "C:\\Users\\HP\\Desktop\\var fin eco\\data\\output\\analyse_descriptive"
+}
